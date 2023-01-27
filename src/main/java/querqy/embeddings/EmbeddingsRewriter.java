@@ -141,31 +141,4 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
         return null;
     }
 
-    static class StringRawQueryAsBooleanClause extends StringRawQuery implements BooleanClause {
-
-        public StringRawQueryAsBooleanClause(final BooleanParent parent, final String queryString, final Occur occur,
-                                             final boolean isGenerated) {
-            super(parent, queryString, occur, isGenerated);
-        }
-
-        @Override
-        public BooleanClause clone(final BooleanQuery newParent) {
-            return new StringRawQueryAsBooleanClause(newParent, getQueryString(), getOccur(), isGenerated());
-        }
-
-        @Override
-        public BooleanClause clone(final BooleanQuery newParent, final boolean generated) {
-            return new StringRawQueryAsBooleanClause(newParent, getQueryString(), getOccur(), generated);
-        }
-
-        @Override
-        public BooleanClause clone(final BooleanQuery newParent, final Occur occur) {
-            return new StringRawQueryAsBooleanClause(newParent, getQueryString(), occur, isGenerated());
-        }
-
-        @Override
-        public BooleanClause clone(final BooleanQuery newParent, final Occur occur, final boolean generated) {
-            return new StringRawQueryAsBooleanClause(newParent, getQueryString(), occur, generated);
-        }
-    }
 }
