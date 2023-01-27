@@ -1,6 +1,5 @@
 package querqy.solr.embeddings;
 
-import junit.framework.TestCase;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.DisMaxParams;
@@ -11,16 +10,11 @@ import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.request.SolrRequestHandler;
 import org.apache.solr.request.SolrRequestInfo;
 import org.apache.solr.response.SolrQueryResponse;
-import org.checkerframework.checker.units.qual.A;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import querqy.embeddings.EmbeddingModel;
 import querqy.embeddings.EmbeddingsRewriter;
-import querqy.embeddings.EmbeddingsRewriterFactory;
-import querqy.solr.rewriter.commonrules.CommonRulesConfigRequestBuilder;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -131,7 +125,7 @@ public class EmbeddingsRewriterTest extends SolrTestCaseJ4 {
 
         );
 
-        assertQ("Boosting not working",
+        assertQ("Main query not working",
                 req,
                 "//result[@name='response' and @numFound='2']",
                 "//doc[1]/str[@name='id' and text()='4']",
