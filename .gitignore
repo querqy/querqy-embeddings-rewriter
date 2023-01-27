@@ -1,0 +1,18 @@
+# root project
+.classpath
+.project
+.settings/*
+.idea/*
+target/*
+.DS_Store
+.vscode
+
+# modules
+**/.classpath
+**/.project
+**/.settings
+**/target
+**/.factorypath
+
+#files
+*.iml
