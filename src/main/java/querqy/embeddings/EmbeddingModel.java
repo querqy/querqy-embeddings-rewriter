@@ -1,13 +1,21 @@
 package querqy.embeddings;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.stream.DoubleStream;
 
+import static java.time.Duration.ofSeconds;
+/*import java.util.stream.DoubleStream;
+import org.tensorflow.*;
+import org.tensorflow.op.*;
+import org.tensorflow.op.core.*;
+*/
 /**
  * This is just a dummy - it could later be used as a Wrapper around SBERT etc.
  */
 public class EmbeddingModel {
+    String EMBEDDING_URL = "https://api.openai.com/";
 
     final static Map<String, float[]> EMBEDDINGS = Map.of(
             "w1", norm(new float[] {0.1f, -0.006f, -0.9f, 0.25f}),
@@ -29,6 +37,16 @@ public class EmbeddingModel {
         return emb;
     }
 
+    public List<Double> getOpenAiEncodings(String text) {
+        OpenAiService serviceApi = new OpenAiService(EMBEDDING_URL,ofSeconds(10));
+        EmbeddingRequest embeddingRequest = EmbeddingRequest.builder()
+            .model("text-similarity-babbage-001")
+            .input(Collections.singletonList("The food was delicious and the waiter..."))
+            .build();
+        List<Embedding> embeddings = serviceApi.createEmbeddings(embeddingRequest).getData();
+        return embeddings.get(0).getEmbedding();
+    }
+
     /**
      * Normalise vector to unit length
      *
@@ -47,4 +65,6 @@ public class EmbeddingModel {
         }
         return uvec;
     }
+
+
 }
