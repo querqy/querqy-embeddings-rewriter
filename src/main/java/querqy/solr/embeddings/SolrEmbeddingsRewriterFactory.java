@@ -11,6 +11,9 @@ import java.util.Map;
 
 public class SolrEmbeddingsRewriterFactory extends SolrRewriterFactoryAdapter {
 
+    public static final String CONF_MODEL = "model";
+    public static final String CONF_CLASS = "class";
+
     private EmbeddingModel model;
 
     public SolrEmbeddingsRewriterFactory(final String rewriterId) {
@@ -21,9 +24,16 @@ public class SolrEmbeddingsRewriterFactory extends SolrRewriterFactoryAdapter {
 
     @Override
     public void configure(final Map<String, Object> config) {
-        // The config would probably hold a pointer from where to load an embeddings model
-        // This is just a dummy model that knows 4 words:
-        this.model = new EmbeddingModel();
+        final Map<String, Object> modelConfig = (Map<String, Object>) config.get(CONF_MODEL);
+        if (modelConfig == null) {
+            throw new IllegalArgumentException("Missing config property" + CONF_MODEL);
+        }
+        final EmbeddingModel embeddingModel = getInstanceFromArg(modelConfig, CONF_CLASS, null);
+        if (embeddingModel == null) {
+            throw new IllegalArgumentException("Missing " + CONF_MODEL + "/" + CONF_CLASS + "  property");
+        }
+        embeddingModel.configure(modelConfig);
+        this.model = embeddingModel;
 
 
     }
@@ -47,7 +57,26 @@ public class SolrEmbeddingsRewriterFactory extends SolrRewriterFactoryAdapter {
         return new EmbeddingsRewriterFactory(getRewriterId(), model);
     }
 
+    // TODO: copied from query-solr ConfigUtils. Make it public there!
+    static <V> V getInstanceFromArg(final Map<String, Object> config, final String propertyName, final V defaultValue) {
 
+        final String classField = (String) config.get(propertyName);
+        if (classField == null) {
+            return defaultValue;
+        }
+
+        final String className = classField.trim();
+        if (className.isEmpty()) {
+            return defaultValue;
+        }
+
+        try {
+            return (V) Class.forName(className).newInstance();
+        } catch (final ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
 }
 
 

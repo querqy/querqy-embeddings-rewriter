@@ -8,7 +8,7 @@ The idea is to map query strings to vector embeddings and add the embeddings to 
 Embeddings can be used either to replace the main query string - and thus do a knn retrieval for the vector of the main query - or to inject the vector as a boost query,
 which boosts the knn documents by vector similarity (the score is additive to the main query).
 
-So far, this is a stub implementation uses a dummy `text -> embedding` mapping (`querqy.embeddings.EmbeddingModel`), which only knows the 4 words w1, 
+So far, this is a stub implementation uses a dummy `text -> embedding` mapping (`querqy.solr.embeddings.DummyEmbeddingModel`), which only knows the 4 words w1, 
 w2, w3, w4.
 
 The implementation only works with Solr so far. An example can be seen in `querqy.solr.embeddings.EmbeddingsRewriterTest`. The test uses Solr's testing

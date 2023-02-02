@@ -2,9 +2,6 @@ package querqy.embeddings;
 
 import querqy.CompoundCharSequence;
 import querqy.model.AbstractNodeVisitor;
-import querqy.model.BooleanClause;
-import querqy.model.BooleanParent;
-import querqy.model.BooleanQuery;
 import querqy.model.BoostQuery;
 import querqy.model.Clause;
 import querqy.model.ExpandedQuery;
@@ -80,19 +77,20 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
 
     protected String makeEmbeddingQueryString(final String queryString) {
 
-        // this is the only Solr-specific query code in this rewriter -> could be abstracted away for ES etc.
+        final Embedding embedding = embeddingModel.getEmbedding(queryString);
 
-        final float[] embedding = embeddingModel.getEmbedding(queryString);
-        final StringBuilder sb = new StringBuilder("{!knn f=").append(vectorField).append(" topK=")
-                .append(topK).append("}[");
+
+        return "{!knn f=" + vectorField + " topK=" + topK + "}[" + embedding.asCommaSeparatedString() + "]";
+    }
+
+    protected String embeddingToString(final float[] embedding) {
+        final StringBuilder sb = new StringBuilder(embedding.length * 16);
         for (int i = 0; i < embedding.length; i++) {
             if (i > 0) {
                 sb.append(", ");
             }
             sb.append(embedding[i]);
         }
-        sb.append("]");
-
         return sb.toString();
     }
 

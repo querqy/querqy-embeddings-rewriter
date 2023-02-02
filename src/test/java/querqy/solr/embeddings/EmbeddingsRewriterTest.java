@@ -13,17 +13,19 @@ import org.apache.solr.response.SolrQueryResponse;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import querqy.embeddings.EmbeddingsRewriter;
+import querqy.embeddings.OpenAiEmbeddingModel;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
-import static querqy.embeddings.EmbeddingModel.norm;
 import static querqy.embeddings.EmbeddingsRewriterFactory.PARAM_BOOST;
 import static querqy.embeddings.EmbeddingsRewriterFactory.PARAM_MODE;
 import static querqy.embeddings.EmbeddingsRewriterFactory.PARAM_QUERQY_PREFIX;
 import static querqy.embeddings.EmbeddingsRewriterFactory.PARAM_TOP_K;
 import static querqy.embeddings.EmbeddingsRewriterFactory.PARAM_VECTOR_FIELD;
+import static querqy.embeddings.MathUtil.norm;
 import static querqy.solr.QuerqyQParserPlugin.PARAM_REWRITERS;
 import static querqy.solr.QuerqyRewriterRequestHandler.ActionParam.SAVE;
 
@@ -67,7 +69,23 @@ public class EmbeddingsRewriterTest extends SolrTestCaseJ4 {
 
         final LocalSolrQueryRequest req = new LocalSolrQueryRequest(core, SAVE.params());
         req.setContentStreams(Collections.singletonList(new ContentStreamBase.StringStream(
-                new EmbeddingsConfigRequestBuilder().buildJson())));
+                new EmbeddingsConfigRequestBuilder().model(DummyEmbeddingModel.class, null).buildJson())));
+
+        /*Alternative: OpenAI
+                new EmbeddingsConfigRequestBuilder().model(OpenAiEmbeddingModel.class, Map.of(
+                        "url", "https://api.openai.com/v1/embeddings",
+                        "api_token", "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",
+                        "open_ai_model", "text-similarity-babbage-001"
+                )).buildJson())));
+
+         */
+
+        /* Alternative: Chorus
+
+               new EmbeddingsConfigRequestBuilder().model(ChorusEmbeddingModel.class, Map.of("url",
+               "http://localhost:8000/strans/text/")).buildJson())));
+
+         */
         req.getContext().put("httpMethod", "POST");
 
         final SolrQueryResponse rsp = new SolrQueryResponse();

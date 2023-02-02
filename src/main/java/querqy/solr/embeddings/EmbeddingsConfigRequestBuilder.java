@@ -1,19 +1,36 @@
 package querqy.solr.embeddings;
 
+import querqy.embeddings.EmbeddingModel;
 import querqy.solr.RewriterConfigRequestBuilder;
-import querqy.solr.SolrRewriterFactoryAdapter;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 public class EmbeddingsConfigRequestBuilder extends RewriterConfigRequestBuilder {
+
+    private Map<String, Object> modelConfig;
+
     public EmbeddingsConfigRequestBuilder() {
         super(SolrEmbeddingsRewriterFactory.class);
     }
 
     @Override
     public Map<String, Object> buildConfig() {
-        // we can later put the path to the model file etc. into the config
-        return Collections.emptyMap();
+        if (modelConfig == null) {
+            throw new IllegalStateException("Missing: model");
+        }
+        return Map.of(SolrEmbeddingsRewriterFactory.CONF_MODEL, modelConfig);
+    }
+
+    public EmbeddingsConfigRequestBuilder model(final Class<? extends EmbeddingModel> modelClass,
+                                                final Map<String, Object> config) {
+        if (config != null && config.containsKey(SolrEmbeddingsRewriterFactory.CONF_CLASS)) {
+            throw new IllegalArgumentException("Property " + SolrEmbeddingsRewriterFactory.CONF_CLASS +
+                    " not allowed in config");
+        }
+        modelConfig = config != null ? new HashMap<>(config) : new HashMap<>();
+        modelConfig.put(SolrEmbeddingsRewriterFactory.CONF_CLASS, modelClass.getName());
+        return this;
+
     }
 }
