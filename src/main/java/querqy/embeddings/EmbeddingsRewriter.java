@@ -7,6 +7,7 @@ import querqy.model.Clause;
 import querqy.model.ExpandedQuery;
 import querqy.model.MatchAllQuery;
 import querqy.model.Node;
+import querqy.model.ParsedRawQuery;
 import querqy.model.QuerqyQuery;
 import querqy.model.Query;
 import querqy.model.StringRawQuery;
@@ -68,19 +69,43 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
                                   final SearchEngineRequestAdapter searchEngineRequestAdapter) {
         return RewriterOutput.builder().expandedQuery(
             collectQueryString(query)
-                .map(this::makeEmbeddingQueryString)
-                .map(embeddingQueryString -> applyVectorQuery(embeddingQueryString, query))
+                    .map(embeddingModel::getEmbedding)
+                    .map(embedding -> applyEmbedding(embedding, query))
+                //.map(this::makeEmbeddingQueryString)
+                //.map(embeddingQueryString -> applyVectorQuery(embeddingQueryString, query))
                 .orElse(query))
                 .build();
 
     }
 
-    protected String makeEmbeddingQueryString(final String queryString) {
-
-        final Embedding embedding = embeddingModel.getEmbedding(queryString);
+    protected ExpandedQuery applyEmbedding(final Embedding embedding, final ExpandedQuery inputQuery) {
 
 
-        return "{!knn f=" + vectorField + " topK=" + topK + "}[" + embedding.asCommaSeparatedString() + "]";
+        switch (queryMode) {
+            case BOOST:
+                inputQuery.addBoostUpQuery(new BoostQuery(new StringRawQuery(null, makeEmbeddingQueryString(embedding),
+                        Clause.Occur.SHOULD, true), boost));
+                break;
+            case MAIN_QUERY:
+                // this is a workaround to avoid changing Querqy's query object model for now:
+                // as we cant set a StringRawQuery as the userQuery, we use a match all for that, add a vector query
+                // as a filter query (retrieve only knn) and a boost query (rank by distance)
+                //inputQuery.setUserQuery(new MatchAllQuery());
+                inputQuery.setUserQuery(new ParsedRawQuery<org.apache.lucene.search.Query>(null, Clause.Occur.MUST,
+                        true, new Add1KnnVectorQuery(vectorField, embedding.asVector(), topK)));
+                //new StringRawQuery(null, embeddingQueryString, Clause.Occur.MUST, true));
+                // inputQuery.addBoostUpQuery(new BoostQuery(embeddingsQuery, boost));
+                break;
+            default:
+                throw new IllegalStateException("Unknown query mode: " + queryMode);
+
+        }
+
+        return inputQuery;
+    }
+
+    protected String makeEmbeddingQueryString(final Embedding embedding) {
+        return "{!func}sum(100,query({!knn f=" + vectorField + " topK=" + topK + " v='[" + embedding.asCommaSeparatedString() + "]'}))";
     }
 
     protected String embeddingToString(final float[] embedding) {
@@ -97,7 +122,7 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
     protected ExpandedQuery applyVectorQuery(final String embeddingQueryString, final ExpandedQuery inputQuery) {
 
 
-                final StringRawQuery embeddingsQuery = new StringRawQuery(null, embeddingQueryString, Clause.Occur.SHOULD, true);
+        final StringRawQuery embeddingsQuery = new StringRawQuery(null, embeddingQueryString, Clause.Occur.SHOULD, true);
         switch (queryMode) {
             case BOOST:
                 inputQuery.addBoostUpQuery(new BoostQuery(embeddingsQuery, boost));
@@ -106,9 +131,9 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
                 // this is a workaround to avoid changing Querqy's query object model for now:
                 // as we cant set a StringRawQuery as the userQuery, we use a match all for that, add a vector query
                 // as a filter query (retrieve only knn) and a boost query (rank by distance)
-                inputQuery.setUserQuery(new MatchAllQuery());
-                inputQuery.addFilterQuery(new StringRawQuery(null, embeddingQueryString, Clause.Occur.MUST, true));
-                inputQuery.addBoostUpQuery(new BoostQuery(embeddingsQuery, boost));
+                //inputQuery.setUserQuery(new MatchAllQuery());
+                inputQuery.setUserQuery(new StringRawQuery(null, embeddingQueryString, Clause.Occur.MUST, true));
+                // inputQuery.addBoostUpQuery(new BoostQuery(embeddingsQuery, boost));
                 break;
             default:
                 throw new IllegalStateException("Unknown query mode: " + queryMode);

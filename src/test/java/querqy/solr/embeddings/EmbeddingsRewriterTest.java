@@ -10,8 +10,10 @@ import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.request.SolrRequestHandler;
 import org.apache.solr.request.SolrRequestInfo;
 import org.apache.solr.response.SolrQueryResponse;
+import org.apache.solr.servlet.SolrDispatchFilter;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import querqy.embeddings.ChorusEmbeddingModel;
 import querqy.embeddings.EmbeddingsRewriter;
 import querqy.embeddings.OpenAiEmbeddingModel;
 
@@ -77,15 +79,15 @@ public class EmbeddingsRewriterTest extends SolrTestCaseJ4 {
                         "api_token", "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",
                         "open_ai_model", "text-similarity-babbage-001"
                 )).buildJson())));
+*/
 
-         */
 
         /* Alternative: Chorus
 
                new EmbeddingsConfigRequestBuilder().model(ChorusEmbeddingModel.class, Map.of("url",
                "http://localhost:8000/strans/text/")).buildJson())));
+*/
 
-         */
         req.getContext().put("httpMethod", "POST");
 
         final SolrQueryResponse rsp = new SolrQueryResponse();
@@ -108,6 +110,7 @@ public class EmbeddingsRewriterTest extends SolrTestCaseJ4 {
                 //DisMaxParams.MM, "100%",
                 "defType", "querqy",
                 "debugQuery", "on",
+                "fl", "id,score",
                 PARAM_REWRITERS, REWRITER_NAME,
                 PARAM_QUERQY_PREFIX + REWRITER_NAME + PARAM_TOP_K,  "1",
                 PARAM_QUERQY_PREFIX + REWRITER_NAME + PARAM_BOOST,  "100",

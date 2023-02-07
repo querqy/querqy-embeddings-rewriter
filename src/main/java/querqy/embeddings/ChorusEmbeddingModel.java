@@ -17,6 +17,8 @@ public class ChorusEmbeddingModel implements EmbeddingModel {
 
     private URL url;
 
+    private boolean normalize = true;
+
     @Override
     public void configure(final Map<String, Object> config) {
         try {
@@ -24,6 +26,7 @@ public class ChorusEmbeddingModel implements EmbeddingModel {
             if (Boolean.TRUE.equals(config.get("test_on_configure"))) {
                 getEmbedding("hello world");
             }
+            this.normalize = !Boolean.FALSE.equals(config.get("normalize"));
 
         } catch (final MalformedURLException e) {
             throw new RuntimeException(e);
@@ -62,7 +65,7 @@ public class ChorusEmbeddingModel implements EmbeddingModel {
                 Map.of("text", text,
                         "output_format", "string",
                         "separator", ",",
-                        "normalize", true
+                        "normalize", normalize
 
                 ));
     }

@@ -14,7 +14,8 @@
             <filter class="solr.LowerCaseFilterFactory"/>
         </analyzer>
     </fieldType>
-    <fieldType name="knn_vector" class="solr.DenseVectorField" vectorDimension="4" similarityFunction="cosine"/>
+    <fieldType name="knn_vector" class="solr.DenseVectorField" vectorDimension="4" similarityFunction="cosine"
+               knnAlgorithm="hnsw"/>
 
     <field name="vector" type="knn_vector" indexed="true" stored="true"/>
     <field name="id" type="string" indexed="true" stored="true" multiValued="false" required="true"/>
