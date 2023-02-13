@@ -1,11 +1,11 @@
 package querqy.embeddings;
 
+import org.apache.lucene.search.KnnVectorQuery;
 import querqy.CompoundCharSequence;
 import querqy.model.AbstractNodeVisitor;
 import querqy.model.BoostQuery;
 import querqy.model.Clause;
 import querqy.model.ExpandedQuery;
-import querqy.model.MatchAllQuery;
 import querqy.model.Node;
 import querqy.model.ParsedRawQuery;
 import querqy.model.QuerqyQuery;
@@ -68,12 +68,10 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
     public RewriterOutput rewrite(final ExpandedQuery query,
                                   final SearchEngineRequestAdapter searchEngineRequestAdapter) {
         return RewriterOutput.builder().expandedQuery(
-            collectQueryString(query)
-                    .map(embeddingModel::getEmbedding)
-                    .map(embedding -> applyEmbedding(embedding, query))
-                //.map(this::makeEmbeddingQueryString)
-                //.map(embeddingQueryString -> applyVectorQuery(embeddingQueryString, query))
-                .orElse(query))
+                        collectQueryString(query)
+                                .map(embeddingModel::getEmbedding)
+                                .map(embedding -> applyEmbedding(embedding, query))
+                                .orElse(query))
                 .build();
 
     }
@@ -92,7 +90,7 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
                 // as a filter query (retrieve only knn) and a boost query (rank by distance)
                 //inputQuery.setUserQuery(new MatchAllQuery());
                 inputQuery.setUserQuery(new ParsedRawQuery<org.apache.lucene.search.Query>(null, Clause.Occur.MUST,
-                        true, new Add1KnnVectorQuery(vectorField, embedding.asVector(), topK)));
+                        true, new KnnVectorQuery(vectorField, embedding.asVector(), topK)));
                 //new StringRawQuery(null, embeddingQueryString, Clause.Occur.MUST, true));
                 // inputQuery.addBoostUpQuery(new BoostQuery(embeddingsQuery, boost));
                 break;
