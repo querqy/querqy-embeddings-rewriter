@@ -1,6 +1,7 @@
 package querqy.embeddings;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class Embedding {
@@ -28,6 +29,14 @@ public class Embedding {
 
     public static Embedding of(final float[] vector) {
         return new Embedding(vector);
+    }
+
+    public static Embedding of(final List<Double> vector) {
+        float[] vec = new float[vector.size()];
+        for (int i = 0; i < vec.length; i++) {
+            vec[i] = vector.get(i).floatValue();
+        }
+        return new Embedding(vec);
     }
 
     public String asCommaSeparatedString() {

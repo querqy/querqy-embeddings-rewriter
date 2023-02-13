@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -51,7 +52,7 @@ public class ChorusEmbeddingModel implements EmbeddingModel {
                 os.write(input, 0, input.length);
             }
 
-            return Embedding.of((String) JsonUtil.readJson(con.getInputStream(), Map.class).get("embedding"));
+            return Embedding.of((List<Double>) JsonUtil.readJson(con.getInputStream(), Map.class).get("embedding"));
 
 
         } catch (final IOException e) {
@@ -63,7 +64,7 @@ public class ChorusEmbeddingModel implements EmbeddingModel {
     protected String toJsonString(final String text) {
         return JsonUtil.toJson(
                 Map.of("text", text,
-                        "output_format", "string",
+                        "output_format", "float_list",
                         "separator", ",",
                         "normalize", normalize
 
