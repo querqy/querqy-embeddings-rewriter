@@ -1,6 +1,7 @@
 package querqy.embeddings;
 
 import lombok.Data;
+import org.apache.solr.search.SolrCache;
 import querqy.solr.utils.JsonUtil;
 
 import java.io.IOException;
@@ -25,7 +26,7 @@ public class OpenAiEmbeddingModel implements EmbeddingModel {
 
 
     @Override
-    public void configure(final Map<String, Object> config) {
+    public void configure(final Map<String, Object> config, final EmbeddingCache<String> embeddingsCache) {
         try {
             this.url = new URL((String) config.get("url"));
             this.apiToken = getRequiredStringParam(config, "api_token");

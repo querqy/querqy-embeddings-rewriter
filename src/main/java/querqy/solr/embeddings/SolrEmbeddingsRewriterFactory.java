@@ -1,26 +1,42 @@
 package querqy.solr.embeddings;
 
+import org.apache.solr.request.SolrRequestInfo;
+import org.apache.solr.search.SolrCache;
+import querqy.embeddings.Embedding;
+import querqy.embeddings.EmbeddingCache;
 import querqy.embeddings.EmbeddingModel;
 import querqy.embeddings.EmbeddingsRewriterFactory;
 import querqy.rewrite.RewriterFactory;
 import querqy.solr.SolrRewriterFactoryAdapter;
+import querqy.solr.utils.ConfigUtils;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class SolrEmbeddingsRewriterFactory extends SolrRewriterFactoryAdapter {
 
+    static EmbeddingCache<String> NULL_CACHE = new EmbeddingCache<String>() {
+        @Override
+        public Embedding getEmbedding(final String key) {
+            return null;
+        }
+
+        @Override
+        public void putEmbedding(final String key, final Embedding embedding) {
+        }
+    };
+
     public static final String CONF_MODEL = "model";
     public static final String CONF_CLASS = "class";
+    public static final String CONF_CACHE_NAME = "cache";
 
     private EmbeddingModel model;
 
     public SolrEmbeddingsRewriterFactory(final String rewriterId) {
         super(rewriterId);
     }
-
-
 
     @Override
     public void configure(final Map<String, Object> config) {
@@ -32,7 +48,14 @@ public class SolrEmbeddingsRewriterFactory extends SolrRewriterFactoryAdapter {
         if (embeddingModel == null) {
             throw new IllegalArgumentException("Missing " + CONF_MODEL + "/" + CONF_CLASS + "  property");
         }
-        embeddingModel.configure(modelConfig);
+
+        final EmbeddingCache<String> cache = ConfigUtils.getStringArg(config, CONF_CACHE_NAME)
+                .map(name ->
+                    (EmbeddingCache<String>) new SolrCacheAdapter(() -> SolrRequestInfo.getRequestInfo().getReq().getSearcher()
+                                .getCache(name))).orElse(NULL_CACHE);
+
+        embeddingModel.configure(modelConfig, cache);
+
         this.model = embeddingModel;
 
 
@@ -76,6 +99,25 @@ public class SolrEmbeddingsRewriterFactory extends SolrRewriterFactoryAdapter {
             throw new RuntimeException(e);
         }
 
+    }
+
+    static class SolrCacheAdapter implements EmbeddingCache<String> {
+
+        final Supplier<SolrCache<String, Embedding>> cacheSupplier;
+
+        SolrCacheAdapter(final Supplier<SolrCache<String, Embedding>> cacheSupplier) {
+            this.cacheSupplier = cacheSupplier;
+        }
+
+        @Override
+        public Embedding getEmbedding(final String key) {
+            return cacheSupplier.get().get(key);
+        }
+
+        @Override
+        public void putEmbedding(final String key, final Embedding embedding) {
+            cacheSupplier.get().put(key, embedding);
+        }
     }
 }
 
