@@ -49,7 +49,7 @@ public class SolrEmbeddingsRewriterFactory extends SolrRewriterFactoryAdapter {
             throw new IllegalArgumentException("Missing " + CONF_MODEL + "/" + CONF_CLASS + "  property");
         }
 
-        final EmbeddingCache<String> cache = ConfigUtils.getStringArg(config, CONF_CACHE_NAME)
+        final EmbeddingCache<String> cache = ConfigUtils.getStringArg(modelConfig, CONF_CACHE_NAME)
                 .map(name ->
                     (EmbeddingCache<String>) new SolrCacheAdapter(() -> SolrRequestInfo.getRequestInfo().getReq().getSearcher()
                                 .getCache(name))).orElse(NULL_CACHE);
@@ -116,7 +116,8 @@ public class SolrEmbeddingsRewriterFactory extends SolrRewriterFactoryAdapter {
 
         @Override
         public void putEmbedding(final String key, final Embedding embedding) {
-            cacheSupplier.get().put(key, embedding);
+            final SolrCache<String, Embedding> cache = cacheSupplier.get();
+            cache.put(key, embedding);
         }
     }
 }

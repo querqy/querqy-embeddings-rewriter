@@ -9,6 +9,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -49,7 +50,6 @@ public class ChorusEmbeddingModel implements EmbeddingModel {
                 return embedding;
             }
 
-
             final HttpURLConnection con = (HttpURLConnection)url.openConnection();
             con.setRequestMethod("POST");
             con.setRequestProperty("Content-Type", CONTENT_TYPE_JSON);
@@ -77,11 +77,13 @@ public class ChorusEmbeddingModel implements EmbeddingModel {
 
     protected String toJsonString(final String text) {
         return JsonUtil.toJson(
-                Map.of("text", text,
+                // sorting the keys so that we get a stable key for the cache lookup. Maybe this
+                // can be configured in Jackson?
+                new TreeMap<String, Object>(Map.of("text", text,
                         "output_format", "float_list",
                         "separator", ",",
                         "normalize", normalize
 
-                ));
+                )));
     }
 }
