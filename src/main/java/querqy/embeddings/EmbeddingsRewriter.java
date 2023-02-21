@@ -2,12 +2,12 @@ package querqy.embeddings;
 
 import org.apache.lucene.search.KnnVectorQuery;
 import querqy.CompoundCharSequence;
+import querqy.lucene.LuceneRawQuery;
 import querqy.model.AbstractNodeVisitor;
 import querqy.model.BoostQuery;
 import querqy.model.Clause;
 import querqy.model.ExpandedQuery;
 import querqy.model.Node;
-import querqy.model.ParsedRawQuery;
 import querqy.model.QuerqyQuery;
 import querqy.model.Query;
 import querqy.model.StringRawQuery;
@@ -89,10 +89,8 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
                 // as we cant set a StringRawQuery as the userQuery, we use a match all for that, add a vector query
                 // as a filter query (retrieve only knn) and a boost query (rank by distance)
                 //inputQuery.setUserQuery(new MatchAllQuery());
-                inputQuery.setUserQuery(new ParsedRawQuery<org.apache.lucene.search.Query>(null, Clause.Occur.MUST,
+                inputQuery.setUserQuery(new LuceneRawQuery(null, Clause.Occur.MUST,
                         true, new KnnVectorQuery(vectorField, embedding.asVector(), topK)));
-                //new StringRawQuery(null, embeddingQueryString, Clause.Occur.MUST, true));
-                // inputQuery.addBoostUpQuery(new BoostQuery(embeddingsQuery, boost));
                 break;
             default:
                 throw new IllegalStateException("Unknown query mode: " + queryMode);
@@ -129,9 +127,7 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
                 // this is a workaround to avoid changing Querqy's query object model for now:
                 // as we cant set a StringRawQuery as the userQuery, we use a match all for that, add a vector query
                 // as a filter query (retrieve only knn) and a boost query (rank by distance)
-                //inputQuery.setUserQuery(new MatchAllQuery());
                 inputQuery.setUserQuery(new StringRawQuery(null, embeddingQueryString, Clause.Occur.MUST, true));
-                // inputQuery.addBoostUpQuery(new BoostQuery(embeddingsQuery, boost));
                 break;
             default:
                 throw new IllegalStateException("Unknown query mode: " + queryMode);
