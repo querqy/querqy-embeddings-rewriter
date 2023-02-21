@@ -76,7 +76,7 @@ public class EmbeddingsRewriterTest extends SolrTestCaseJ4 {
         /*Alternative: OpenAI
                 new EmbeddingsConfigRequestBuilder().model(OpenAiEmbeddingModel.class, Map.of(
                         "url", "https://api.openai.com/v1/embeddings",
-                        "api_token", "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",
+                        "api_token", "<your API token here>",
                         "open_ai_model", "text-similarity-babbage-001"
                 )).buildJson())));
 */
