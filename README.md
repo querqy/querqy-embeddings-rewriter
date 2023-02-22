@@ -1,23 +1,37 @@
 # Querqy Vector Embeddings Rewriter
-A Querqy rewriter that adds embeddings to the query.
 
-**This is just a stub implementation so far.**
+## About
+A [Querqy](https://github.com/querqy/querqy) search query rewriter that adds embeddings to the query. So far, it is 
+only available for the Solr plugin version of Querqy, but it should shortly become available for the other Querqy
+versions (OpenSearch, Elasticsearch, Querqy Unplugged).
 
-The idea is to map query strings to vector embeddings and add the embeddings to the query as part of the Querqy rewrite chain.
+## Embedding models
+The idea is to map query strings to vector embeddings and add the embeddings to the search query when it is being
+processed in the Querqy query rewrite chain and then turned into a Lucene dense vector query. 
 
-Embeddings can be used either to replace the main query string - and thus do a knn retrieval for the vector of the main query - or to inject the vector as a boost query,
-which boosts the knn documents by vector similarity (the score is additive to the main query).
+Embeddings can be used either to replace the main query string - and thus do a knn retrieval for the vector of the main
+query - or to inject the vector as a boost query, which boosts the knn documents by vector similarity (the score is 
+additive to the main query).
 
-So far, this is a stub implementation uses a dummy `text -> embedding` mapping (`querqy.solr.embeddings.DummyEmbeddingModel`), which only knows the 4 words w1, 
-w2, w3, w4.
+The mapping from the query string to an embedding is defined in an `EmbeddingModel`. So far, this rewriter package comes
+with the following EmbeddingModel implementations:
 
-The implementation only works with Solr so far. An example can be seen in `querqy.solr.embeddings.EmbeddingsRewriterTest`. The test uses Solr's testing
-framework. As this might be a bit tricky to translate into API calls, this is how it translates into HTTP when
-you work directly with Solr:
+* ChorusEmbeddingModel: This model integrates with the [Chorus stack](https://github.com/querqy/chorus) (an open source example e-commerce search
+  application). It retrieves the embeddings from an HTTP-based embeddings service that is part of Chorus. You might want to
+  use this model as a starting point for implementing your own embeddings service.
+* OpenAiEmbeddingModel: This model retrieves the embeddings from the OpenAI API. It cannot be used directly, as the
+  number of vector dimensions returned by OpenAI would exceed the max. number of dimensions that Lucene can handle.
+  Nevertheless, it will give you an idea how to integrate external APIs.
+* DummyEmbeddingsModel: This model has a vocabulary of only 4 words w1, w2, w3, w4, and it is only used for development
+  and testing.
 
-Method `beforeTests()` initialises a Solr core using *.xml configs stored under src/test/resources.
+You can use your own model by implementing the `EmbeddingModel` interface.
 
-`withEmbeddingsRewriter` calls Querqy's rewriter API:
+## Rewriter configuration
+
+
+Like any other Querqy rewriter, the embeddings rewriter is configured using [Querqy's rewriter API](https://querqy.org/docs/querqy/rewriters.html). The 
+configuration skeleton looks like this:
 
 ```
 POST /solr/<core>/querqy/rewriter/emb?action=save
@@ -26,62 +40,99 @@ Content-Type: application/json
 ```json
 {
    "class": "querqy.solr.embeddings.SolrEmbeddingsRewriterFactory",
-   "config": {}
-}
-```
-The rewriter becomes available under the ID `emb` (see URL). The name can be freely chosen. The test keeps it in the constant `REWRITER_NAME`.
-
-`testBoost()` runs a boosting test. Query "w2" matches all docs (see method `addDocs()`) but the second doc (id=2) gets boosted to the top
-as the `w2` query string is mapped to the same vector that we added to doc 2 and as the vector embedding is added to the query as a boost
-query.
-
-The code actually produces the following URL params: 
-* q=w2
-* &qf=f1 f2 f3
-* &defType=querqy
-* &querqy.rewriters=emb (use the emb rewriter in the rewrite chain)
-* &querqy.emb.topK=1 (the k in knn: k=1)
-* &querqy.emb.boost=100 (multiply the vector similarity by 100 and add this product to the score)
-* &querqy.emb.mode=BOOST (boost, don't use knn as the main query)
-* &querqy.emb.f=vector (the field to which we indexed the vectors)
-
-`testMainQuery()` uses the knn query as the main query and ranks by similarity. We use query "w4" (doc 4 to end up at the top), the doc
-with the nearest vector (doc 2) comes in second. As we set k=2, we only get back 2 results.
-
-The code produces the following URL params: 
-* q=w4
-* &qf=f1 f2 f3
-* &defType=querqy
-* &querqy.rewriters=emb (use the emb rewriter in the rewrite chain)
-* &querqy.emb.topK=2 (the k in knn: k=2 - get back 2 results)
-* &querqy.emb.mode=MAIN_QUERY (retrieve top k, don't just add a boost)
-* &querqy.emb.f=vector (the field to which we indexed the vectors)
-
-If you want to load a different embeddings mappings model (=not just a dummy model), you will have to go to 
-`querqy.solr.embeddings.SolrEmbeddingsRewriterFactory#configure` and load the model there, replacing the dummy `EmbeddingModel` class
-(or add an abstraction). Note that loading the model is executed only once, i.e. when the rewriter is created (the POST above).
-For the EmbeddingsRewriter, an instance is created per search request and the already loaded model is just passed to it in the constructor.
-
-You will probably need to pass parameters to the rewriter factory that help configure the model. You can extend the configuration like this:
-
-```POST `/solr/<core>/querqy/rewriter/emb?action=save
-Content-Type: application/json```
-```json
-{
-   "class": "querqy.solr.embeddings.SolrEmbeddingsRewriterFactory",
    "config": {
-    "my_param1" : "my_value1",
-    "my_param2" : 22
+     "model" : {
+       "class": "<my.model.ClassName>",
+       "cache": "<optional.cache-name>",
+       "<model-param1>": "<value 1>"
+     }
    }
 }
 ```
+The rewriter becomes available under the ID `emb` (see last part of the path in the URL). The name can be freely chosen.
 
-and then pick up the params in `querqy.solr.embeddings.SolrEmbeddingsRewriterFactory#configure(Map<String, Object> config)`:
-```java
-  String paramValue1 = config.get("my_param1");
+The `config` part contains the definition of the embedding model, where `class` references the Java class 
+that implements the `EmbeddingModel` interface.
+
+The `cache` property references an optional Solr cache for embeddings. We recommend to configure this cache, especially
+if getting the embeddings for a query string is an expensive operation in your `EmbeddingModel` implementation.
+Usually, a single embedding is needed multiple times per search request and using this cache thus makes sense, even
+if the  queries that were entered by the search user will not reoccur. The following example shows how a
+cache  named `embeddings` would be configured in `solrconfig.xml`:
+
+```xml
+
+<query>
+    <cache name="embeddings" class="solr.CaffeineCache"
+           size="1024"
+           initialSize="128"
+    />
+</query>
+
 ```
 
+The rewriter configuration also allows to specify further, model-dependant settings.
+The full configuration for the rewriter, using the Chorus embeddings model and the above cache, could then look like
+this:
 
+```
+POST /solr/<core>/querqy/rewriter/emb?action=save
+Content-Type: application/json
+```
+```json
+{
+  "class": "querqy.solr.embeddings.SolrEmbeddingsRewriterFactory",
+  "config": {
+    "model" : {
+      "class": "querqy.embeddings.ChorusEmbeddingModel",
+      "cache": "embeddings",
+      "url": "http://embeddings:8000/minilm/text/",
+      "normalize": true
+    }
+  }
+}
+```
+
+The configuration adds two properties, `url` (the HTTP URL of the Chorus embeddings service) and `normalize`, which 
+is passed on to the service to control whether vectors should be normalized to unit length. Whether you want
+normalized vectors depends on the choice of the vector similarity that you configured for your dense vector field in
+Solr (you will need normalize:true for `dot_product` and normalize:false for `euclidean` and you can use either in case
+of `cosine`).
+
+## Making queries
+
+Provided that you have configured the Querqy query parser under the name `querqy` (see [here](https://querqy.org/docs/querqy/index.html#installation) for the setup) and
+created the embeddings rewriter with ID `emb` (see above), you can start using the embeddings rewriter when you make
+search queries to Solr. 
+
+The rewriter can be used in two modes - one that uses the embedding to define the result set by
+retrieving the top k results whose vectors are the nearest to the embedding of the query and scoring them by the vector
+similarity to the query. The other mode uses keyword matching to retrieve the results but then boosts the top k nearest
+vectors/documents by vector similarity.
+
+Parameters when retrieving the top k results:
+
+* q=\<query text\>
+* &qf=\<search fields (ignored)\>
+* &defType=querqy
+* &querqy.rewriters=emb (use the emb rewriter in the rewrite chain)
+* &querqy.emb.topK=100 (the k in knn: k=100 - get back top 100 results)
+* &querqy.emb.mode=MAIN_QUERY (retrieve top k)
+* &querqy.emb.f=vector (the field to which we indexed the vectors)
+
+(Note that if you use a rewriter ID other than `emb`, you will have to replace the `emb` in the parameter
+names, like in `querqy.emb.topK`)
+
+Parameters when boosting the top k results:
+
+* q=\<query text\>
+* &qf=f1 f2 f3 (search fields)
+* &defType=querqy
+* &querqy.rewriters=emb (use the emb rewriter in the rewrite chain)
+* &querqy.emb.topK=20 (the k in knn: boost the top 20 by vector similarity)
+* &querqy.emb.boost=100 (multiply the vector similarity by 100 and add this product to the score)
+* &querqy.emb.mode=BOOST (boost, don't use knn as the main query)
+* &querqy.emb.f=vector (the field to which we indexed the vectors)
 
 
 
