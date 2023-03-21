@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.elasticsearch.ElasticsearchException;
-import querqy.embeddings.Embedding;
-import querqy.embeddings.EmbeddingCache;
 import querqy.embeddings.EmbeddingModel;
 import querqy.embeddings.EmbeddingsRewriterFactory;
 import querqy.rewrite.RewriterFactory;
@@ -14,20 +12,8 @@ import querqy.elasticsearch.ESRewriterFactory;
 
 public class ElasticsearchEmbeddingsRewriterFactory extends ESRewriterFactory {
 
-    static EmbeddingCache<String> NULL_CACHE = new EmbeddingCache<String>() {
-        @Override
-        public Embedding getEmbedding(final String key) {
-            return null;
-        }
-
-        @Override
-        public void putEmbedding(final String key, final Embedding embedding) {
-        }
-    };
-
     public static final String CONF_MODEL = "model";
     public static final String CONF_CLASS = "class";
-    public static final String CONF_CACHE_NAME = "cache";
 
     private EmbeddingModel model;
 
