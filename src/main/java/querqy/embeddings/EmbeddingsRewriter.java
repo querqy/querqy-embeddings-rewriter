@@ -10,7 +10,6 @@ import querqy.model.ExpandedQuery;
 import querqy.model.Node;
 import querqy.model.QuerqyQuery;
 import querqy.model.Query;
-import querqy.model.StringRawQuery;
 import querqy.model.Term;
 import querqy.rewrite.QueryRewriter;
 import querqy.rewrite.RewriterOutput;
@@ -77,20 +76,19 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
     }
 
     protected ExpandedQuery applyEmbedding(final Embedding embedding, final ExpandedQuery inputQuery) {
-
+        KnnVectorQuery knnVectorQuery =  new KnnVectorQuery(vectorField, embedding.asVector(), topK);
 
         switch (queryMode) {
             case BOOST:
-                inputQuery.addBoostUpQuery(new BoostQuery(new StringRawQuery(null, makeEmbeddingQueryString(embedding),
-                        Clause.Occur.SHOULD, true), boost));
+                inputQuery.addBoostUpQuery(new BoostQuery(
+                        new LuceneRawQuery(null, Clause.Occur.SHOULD,true, knnVectorQuery),
+                        boost
+                ));
                 break;
             case MAIN_QUERY:
-                // this is a workaround to avoid changing Querqy's query object model for now:
-                // as we cant set a StringRawQuery as the userQuery, we use a match all for that, add a vector query
-                // as a filter query (retrieve only knn) and a boost query (rank by distance)
-                //inputQuery.setUserQuery(new MatchAllQuery());
-                inputQuery.setUserQuery(new LuceneRawQuery(null, Clause.Occur.MUST,
-                        true, new KnnVectorQuery(vectorField, embedding.asVector(), topK)));
+                inputQuery.setUserQuery(
+                        new LuceneRawQuery(null, Clause.Occur.MUST,true, knnVectorQuery)
+                );
                 break;
             default:
                 throw new IllegalStateException("Unknown query mode: " + queryMode);
@@ -100,42 +98,6 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
         return inputQuery;
     }
 
-    protected String makeEmbeddingQueryString(final Embedding embedding) {
-        return "{!func}sum(100,query({!knn f=" + vectorField + " topK=" + topK + " v='[" + embedding.asCommaSeparatedString() + "]'}))";
-    }
-
-    protected String embeddingToString(final float[] embedding) {
-        final StringBuilder sb = new StringBuilder(embedding.length * 16);
-        for (int i = 0; i < embedding.length; i++) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-            sb.append(embedding[i]);
-        }
-        return sb.toString();
-    }
-
-    protected ExpandedQuery applyVectorQuery(final String embeddingQueryString, final ExpandedQuery inputQuery) {
-
-
-        final StringRawQuery embeddingsQuery = new StringRawQuery(null, embeddingQueryString, Clause.Occur.SHOULD, true);
-        switch (queryMode) {
-            case BOOST:
-                inputQuery.addBoostUpQuery(new BoostQuery(embeddingsQuery, boost));
-                break;
-            case MAIN_QUERY:
-                // this is a workaround to avoid changing Querqy's query object model for now:
-                // as we cant set a StringRawQuery as the userQuery, we use a match all for that, add a vector query
-                // as a filter query (retrieve only knn) and a boost query (rank by distance)
-                inputQuery.setUserQuery(new StringRawQuery(null, embeddingQueryString, Clause.Occur.MUST, true));
-                break;
-            default:
-                throw new IllegalStateException("Unknown query mode: " + queryMode);
-
-        }
-
-        return inputQuery;
-    }
     /**
      * Traverse the query graph, collect all the terms and join them into a string
      */
