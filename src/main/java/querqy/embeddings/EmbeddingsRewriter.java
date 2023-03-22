@@ -76,23 +76,18 @@ public class EmbeddingsRewriter extends AbstractNodeVisitor<Node> implements Que
     }
 
     protected ExpandedQuery applyEmbedding(final Embedding embedding, final ExpandedQuery inputQuery) {
-        KnnVectorQuery knnVectorQuery =  new KnnVectorQuery(vectorField, embedding.asVector(), topK);
+        KnnVectorQuery knnVectorQuery = new KnnVectorQuery(vectorField, embedding.asVector(), topK);
+        LuceneRawQuery luceneRawQuery = new LuceneRawQuery(null, Clause.Occur.MUST,true, knnVectorQuery);
 
         switch (queryMode) {
             case BOOST:
-                inputQuery.addBoostUpQuery(new BoostQuery(
-                        new LuceneRawQuery(null, Clause.Occur.SHOULD,true, knnVectorQuery),
-                        boost
-                ));
+                inputQuery.addBoostUpQuery(new BoostQuery(luceneRawQuery, boost));
                 break;
             case MAIN_QUERY:
-                inputQuery.setUserQuery(
-                        new LuceneRawQuery(null, Clause.Occur.MUST,true, knnVectorQuery)
-                );
+                inputQuery.setUserQuery(luceneRawQuery);
                 break;
             default:
                 throw new IllegalStateException("Unknown query mode: " + queryMode);
-
         }
 
         return inputQuery;
