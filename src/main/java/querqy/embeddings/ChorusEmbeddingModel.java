@@ -1,8 +1,12 @@
 package querqy.embeddings;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import querqy.solr.utils.JsonUtil;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -16,6 +20,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class ChorusEmbeddingModel implements EmbeddingModel {
 
     private static final String CONTENT_TYPE_JSON = "application/json";
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private URL url;
 
@@ -65,14 +71,23 @@ public class ChorusEmbeddingModel implements EmbeddingModel {
                 os.write(input, 0, input.length);
             }
 
-            embedding = Embedding.of((List<Double>) JsonUtil.readJson(con.getInputStream(), Map.class).get("embedding"));
+            embedding = parseEmbeddingFromResponse(con.getInputStream());
             embeddingsCache.putEmbedding(cacheKey, embedding);
             return embedding;
 
         } catch (final IOException e) {
             throw new RuntimeException(e);
         }
+    }
 
+    public Embedding parseEmbeddingFromResponse(InputStream is) {
+        try {
+            JsonNode responseTree = objectMapper.readTree(is);
+            List<Double> embedding = objectMapper.convertValue(responseTree.path("embedding"), new TypeReference<>() {});
+            return Embedding.of(embedding);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     protected String toJsonString(final String text) {
@@ -86,4 +101,5 @@ public class ChorusEmbeddingModel implements EmbeddingModel {
 
                 )));
     }
+
 }
